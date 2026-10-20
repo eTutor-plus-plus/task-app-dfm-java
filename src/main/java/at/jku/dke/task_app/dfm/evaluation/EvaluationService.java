@@ -4,7 +4,15 @@ import at.jku.dke.etutor.task_app.dto.CriterionDto;
 import at.jku.dke.etutor.task_app.dto.GradingDto;
 import at.jku.dke.etutor.task_app.dto.SubmitSubmissionDto;
 import at.jku.dke.task_app.dfm.data.repositories.DfmTaskRepository;
+import at.jku.dke.task_app.dfm.data.entities.DfmEvaluationCriterion;
 import at.jku.dke.task_app.dfm.dto.DfmSubmissionDto;
+import at.jku.dke.task_app.dfm.models.ast.AbstractElement;
+import at.jku.dke.task_app.dfm.models.ast.DimensionElement;
+import at.jku.dke.task_app.dfm.models.ast.FactElement;
+import at.jku.dke.task_app.dfm.visualization.DfmVisualizationService;
+import at.jku.dke.task_app.dfm.parser.DfmParseException;
+import at.jku.dke.task_app.dfm.parser.DfmParser;
+import at.jku.dke.etutor.task_app.dto.SubmissionMode;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +34,8 @@ public class EvaluationService {
 
     private final DfmTaskRepository taskRepository;
     private final MessageSource messageSource;
+    private final DfmParser parser;
+    private final DfmVisualizationService visualizationService;
 
     /**
      * Creates a new instance of class {@link EvaluationService}.
@@ -36,6 +46,8 @@ public class EvaluationService {
     public EvaluationService(DfmTaskRepository taskRepository, MessageSource messageSource) {
         this.taskRepository = taskRepository;
         this.messageSource = messageSource;
+        this.parser = new DfmParser();
+        this.visualizationService = new DfmVisualizationService();
     }
 
     /**
@@ -46,69 +58,166 @@ public class EvaluationService {
      */
     @Transactional
     public GradingDto evaluate(SubmitSubmissionDto<DfmSubmissionDto> submission) {
-        // find task
         var task = this.taskRepository.findById(submission.taskId()).orElseThrow(() -> new EntityNotFoundException("Task " + submission.taskId() + " does not exist."));
-
-        // evaluate input
         LOG.info("Evaluating input for task {} with mode {} and feedback-level {}", submission.taskId(), submission.mode(), submission.feedbackLevel());
-        Locale locale = Locale.of(submission.language());
-        BigDecimal points = BigDecimal.ZERO;
+        return evaluateDfm(task.getSolution(), submission.submission().input(), task.getMaxPoints(),
+            submission.mode(), submission.feedbackLevel(), Locale.of(submission.language()), task.getEvaluationCriteria());
+    }
+
+    /**
+     * Evaluates a DFM submission against a textual DFM solution.
+     *
+     * @param solution    The expected DFM model.
+     * @param input       The submitted DFM model.
+     * @param maxPoints   The maximum number of points.
+     * @param mode        The submission mode.
+     * @param feedbackLevel The requested feedback level.
+     * @param locale      The feedback locale.
+     * @return The grading result.
+     */
+    public GradingDto evaluateDfm(String solution, String input, BigDecimal maxPoints,
+                                  SubmissionMode mode, int feedbackLevel, Locale locale) {
+        return evaluateDfm(solution, input, maxPoints, mode, feedbackLevel, locale, List.of());
+    }
+
+    public GradingDto evaluateDfm(String solution, String input, BigDecimal maxPoints,
+                                  SubmissionMode mode, int feedbackLevel, Locale locale,
+                                  List<DfmEvaluationCriterion> evaluationCriteria) {
         List<CriterionDto> criteria = new ArrayList<>();
-        String feedback;
-
-        // parse input
-        Integer input = null;
-        NumberFormatException error = null;
+        List<AbstractElement> expected = null;
+        List<AbstractElement> actual = null;
+        DfmParseException parseError = null;
         try {
-            input = Integer.parseInt(submission.submission().input());
-        } catch (NumberFormatException ex) {
-            error = ex;
+            expected = parser.parse(solution);
+            actual = parser.parse(input);
+        } catch (DfmParseException ex) {
+            parseError = ex;
         }
 
-        if (error != null) {
-            criteria.add(new CriterionDto(
-                this.messageSource.getMessage("criterium.syntax", null, locale),
-                null,
-                false,
-                error.getMessage()));
-        } else {
-            criteria.add(new CriterionDto(
-                this.messageSource.getMessage("criterium.syntax", null, locale),
-                null,
-                true,
-                this.messageSource.getMessage("criterium.syntax.valid", null, locale)));
-        }
+        boolean valid = parseError == null;
+        criteria.add(new CriterionDto(
+            messageSource.getMessage("criterium.syntax", null, locale),
+            null,
+            valid,
+            valid ? messageSource.getMessage("criterium.syntax.valid.dfm", null, locale) : parseError.getMessage()));
 
-        // evaluate and grade
-        switch (submission.mode()) {
-            case RUN:
-                feedback = this.messageSource.getMessage("input", new Object[]{submission.submission().input()}, locale);
-                break;
-            case DIAGNOSE:
-                feedback = this.messageSource.getMessage(error == null && input.equals(task.getSolution()) ? "correct" : "incorrect", null, locale);
-                if (error == null) {
-                    int diff = task.getSolution() - input;
-                    if (diff == 0)
-                        points = task.getMaxPoints();
-                    if (submission.feedbackLevel() > 0)
-                        criteria.add(new CriterionDto(
-                            this.messageSource.getMessage("criterium.value", null, locale),
-                            points,
-                            diff == 0,
-                            this.messageSource.getMessage(diff < 0 ? "criterium.value.less" : (diff > 0 ? "criterium.value.greater" : "criterium.value.equals"), null, locale)));
+        boolean correct = valid && modelsEqual(expected, actual);
+        BigDecimal points = BigDecimal.ZERO;
+        if (valid && !evaluationCriteria.isEmpty()) {
+            criteria.remove(0);
+            points = evaluateCriteria(evaluationCriteria, actual, criteria, feedbackLevel, locale);
+            correct = points.compareTo(maxPoints) == 0;
+        }
+        if (valid && feedbackLevel > 0) {
+            criteria.add(new CriterionDto(
+                messageSource.getMessage("criterium.visualization", null, locale), null, true,
+                visualizationService.render(actual)));
+        }
+        String feedback;
+        switch (mode) {
+            case RUN -> feedback = messageSource.getMessage("input", new Object[]{input}, locale);
+            case DIAGNOSE -> {
+                feedback = messageSource.getMessage(correct ? "correct" : "incorrect", null, locale);
+                if (correct) {
+                    points = maxPoints;
                 }
-                break;
-            case SUBMIT:
-                if (error == null && input.equals(task.getSolution())) {
-                    feedback = this.messageSource.getMessage("correct", null, locale);
-                    points = task.getMaxPoints();
-                } else
-                    feedback = this.messageSource.getMessage("incorrect", null, locale);
-                break;
-            default:
-                throw new IllegalStateException("Unexpected value: " + submission.mode());
+                if (feedbackLevel > 0 && valid && evaluationCriteria.isEmpty()) {
+                    criteria.add(new CriterionDto(
+                        messageSource.getMessage("criterium.value", null, locale),
+                        correct ? maxPoints : BigDecimal.ZERO,
+                        correct,
+                        messageSource.getMessage(correct ? "criterium.value.equals.dfm" : "criterium.value.different.dfm", null, locale)));
+                }
+            }
+            case SUBMIT -> {
+                feedback = messageSource.getMessage(correct ? "correct" : "incorrect", null, locale);
+                if (correct) {
+                    points = maxPoints;
+                }
+            }
+            default -> throw new IllegalStateException("Unexpected value: " + mode);
         }
+        return new GradingDto(maxPoints, points, feedback, criteria);
+    }
 
-        return new GradingDto(task.getMaxPoints(), points, feedback, criteria);
+    private BigDecimal evaluateCriteria(List<DfmEvaluationCriterion> evaluationCriteria,
+                                        List<AbstractElement> actual, List<CriterionDto> result,
+                                        int feedbackLevel, Locale locale) {
+        BigDecimal points = BigDecimal.ZERO;
+        for (var criterion : evaluationCriteria) {
+            boolean passed = false;
+            String feedback;
+            try {
+                var expected = parser.parse(criterion.getSubtree());
+                passed = expected.stream().allMatch(element ->
+                    findElement(element.getName(), actual)
+                        .map(candidate -> matches(candidate, element, criterion.isPartialSolution(),
+                            criterion.isAllowIncorrectFactClass()))
+                        .orElse(false));
+                feedback = messageSource.getMessage(
+                    passed ? "criterium.evaluation.passed" : "criterium.evaluation.notMet", null, locale);
+            } catch (DfmParseException ex) {
+                feedback = ex.getMessage();
+            }
+            if (passed) {
+                points = points.add(criterion.getPoints());
+            }
+            if (feedbackLevel > 0) {
+                result.add(new CriterionDto(criterion.getName(),
+                    passed ? criterion.getPoints() : BigDecimal.ZERO, passed, feedback));
+            }
+        }
+        return points;
+    }
+
+    private boolean matches(AbstractElement actual, AbstractElement expected,
+                            boolean partialSolution, boolean allowIncorrectFactClass) {
+        if (actual instanceof FactElement actualFact && expected instanceof FactElement expectedFact) {
+            if (allowIncorrectFactClass && actualFact.getName().equals(expectedFact.getName())) {
+                return true;
+            }
+            if (!expectedFact.structurallyEqualsWithoutDimensions(actualFact)) {
+                return false;
+            }
+            if (partialSolution && expectedFact.getDimensions().isEmpty()) {
+                return true;
+            }
+            return expectedFact.getDimensions().stream().allMatch(expectedDimension ->
+                actualFact.getDimensions().stream().anyMatch(actualDimension ->
+                    matches(actualDimension, expectedDimension, partialSolution, allowIncorrectFactClass)));
+        }
+        if (actual instanceof DimensionElement actualDimension && expected instanceof DimensionElement expectedDimension) {
+            return partialSolution
+                ? actualDimension.containsAllHierarchies(expectedDimension)
+                : actualDimension.structurallyEquals(expectedDimension);
+        }
+        return !partialSolution && expected.structurallyEquals(actual);
+    }
+
+    private java.util.Optional<AbstractElement> findElement(String name, List<AbstractElement> elements) {
+        for (var element : elements) {
+            if (element.getName().equals(name)) {
+                return java.util.Optional.of(element);
+            }
+            if (element instanceof FactElement fact) {
+                var nested = findElement(name, new ArrayList<>(fact.getDimensions()));
+                if (nested.isPresent()) {
+                    return nested;
+                }
+            }
+        }
+        return java.util.Optional.empty();
+    }
+
+    private boolean modelsEqual(List<AbstractElement> expected, List<AbstractElement> actual) {
+        if (expected.size() != actual.size()) {
+            return false;
+        }
+        for (int i = 0; i < expected.size(); i++) {
+            if (!expected.get(i).structurallyEquals(actual.get(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

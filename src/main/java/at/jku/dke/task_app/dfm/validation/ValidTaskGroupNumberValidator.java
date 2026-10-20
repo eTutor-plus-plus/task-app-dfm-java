@@ -16,6 +16,9 @@ public class ValidTaskGroupNumberValidator implements ConstraintValidator<ValidT
 
     @Override
     public boolean isValid(ModifyDfmTaskGroupDto value, ConstraintValidatorContext context) {
-        return value.minNumber() < value.maxNumber();
+        return value != null
+            && value.minNumber() != null
+            && value.maxNumber() != null
+            && value.minNumber() <= value.maxNumber();
     }
 }

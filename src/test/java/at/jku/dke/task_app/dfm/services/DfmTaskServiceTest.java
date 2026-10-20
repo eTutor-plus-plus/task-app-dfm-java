@@ -11,6 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.Locale;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -21,7 +22,8 @@ class DfmTaskServiceTest {
     @Test
     void createTask() {
         // Arrange
-        ModifyTaskDto<ModifyDfmTaskDto> dto = new ModifyTaskDto<>(7L, BigDecimal.TEN, "dfm", TaskStatus.APPROVED, new ModifyDfmTaskDto(33));
+        ModifyTaskDto<ModifyDfmTaskDto> dto = new ModifyTaskDto<>(7L, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+            new ModifyDfmTaskDto("fact Sales { profit; };", List.of()));
         DfmTaskService service = new DfmTaskService(null, null, null);
 
         // Act
@@ -34,7 +36,8 @@ class DfmTaskServiceTest {
     @Test
     void createTaskInvalidType() {
         // Arrange
-        ModifyTaskDto<ModifyDfmTaskDto> dto = new ModifyTaskDto<>(7L, BigDecimal.TEN, "sql", TaskStatus.APPROVED, new ModifyDfmTaskDto(33));
+        ModifyTaskDto<ModifyDfmTaskDto> dto = new ModifyTaskDto<>(7L, BigDecimal.TEN, "sql", TaskStatus.APPROVED,
+            new ModifyDfmTaskDto("fact Sales { profit; };", List.of()));
         DfmTaskService service = new DfmTaskService(null, null, null);
 
         // Act & Assert
@@ -44,9 +47,10 @@ class DfmTaskServiceTest {
     @Test
     void updateTask() {
         // Arrange
-        ModifyTaskDto<ModifyDfmTaskDto> dto = new ModifyTaskDto<>(7L, BigDecimal.TEN, "dfm", TaskStatus.APPROVED, new ModifyDfmTaskDto(33));
+        ModifyTaskDto<ModifyDfmTaskDto> dto = new ModifyTaskDto<>(7L, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+            new ModifyDfmTaskDto("fact Sales { profit; };", List.of()));
         DfmTaskService service = new DfmTaskService(null, null, null);
-        DfmTask task = new DfmTask(3);
+        DfmTask task = new DfmTask("fact Sales { profit; };");
 
         // Act
         service.updateTask(task, dto);
@@ -58,9 +62,10 @@ class DfmTaskServiceTest {
     @Test
     void updateTaskInvalidType() {
         // Arrange
-        ModifyTaskDto<ModifyDfmTaskDto> dto = new ModifyTaskDto<>(7L, BigDecimal.TEN, "sql", TaskStatus.APPROVED, new ModifyDfmTaskDto(33));
+        ModifyTaskDto<ModifyDfmTaskDto> dto = new ModifyTaskDto<>(7L, BigDecimal.TEN, "sql", TaskStatus.APPROVED,
+            new ModifyDfmTaskDto("fact Sales { profit; };", List.of()));
         DfmTaskService service = new DfmTaskService(null, null, null);
-        DfmTask task = new DfmTask(3);
+        DfmTask task = new DfmTask("fact Sales { profit; };");
 
         // Act & Assert
         assertThrows(ResponseStatusException.class, () -> service.updateTask(task, dto));
@@ -71,8 +76,8 @@ class DfmTaskServiceTest {
         // Arrange
         MessageSource ms = mock(MessageSource.class);
         DfmTaskService service = new DfmTaskService(null, null, ms);
-        DfmTask task = new DfmTask(3);
-        task.setSolution(33);
+        DfmTask task = new DfmTask("fact Sales { profit; };");
+        task.setSolution("fact Sales { profit; };");
 
         // Act
         TaskModificationResponseDto result = service.mapToReturnData(task, true);
