@@ -6,6 +6,7 @@ import at.jku.dke.task_app.dfm.dto.DfmTaskDto;
 import at.jku.dke.task_app.dfm.dto.ModifyDfmTaskDto;
 import at.jku.dke.task_app.dfm.services.DfmTaskService;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.stream.Collectors;
 
 /**
  * Controller for managing {@link DfmTask}s.
@@ -24,7 +25,11 @@ public class TaskController extends BaseTaskController<DfmTask, DfmTaskDto, Modi
 
     @Override
     protected DfmTaskDto mapToDto(DfmTask task) {
-        return new DfmTaskDto(task.getSolution());
+        var criteria = task.getEvaluationCriteria().stream()
+            .map(c -> new at.jku.dke.task_app.dfm.dto.DfmEvaluationCriterionDto(
+                c.getName(), c.getPoints(), c.getSubtree(), c.isPartialSolution(), c.isAllowIncorrectFactClass()))
+            .collect(Collectors.toList());
+        return new DfmTaskDto(task.getSolution(), criteria);
     }
 
 }

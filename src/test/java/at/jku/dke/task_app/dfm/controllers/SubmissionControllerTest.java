@@ -58,7 +58,7 @@ class SubmissionControllerTest {
         this.repository.deleteAll();
 
         var group = this.groupRepository.save(new DfmTaskGroup(1L, TaskStatus.APPROVED, 1, 10));
-        var task = this.repository.save(new DfmTask(1L, BigDecimal.TWO, TaskStatus.APPROVED, group, 5));
+        var task = this.repository.save(new DfmTask(1L, BigDecimal.TWO, TaskStatus.APPROVED, group, "fact Sales { profit; };"));
         this.taskId = task.getId();
 
         var submission = new DfmSubmission("test-user", "test-id", task, "de", 3, SubmissionMode.SUBMIT, "5");

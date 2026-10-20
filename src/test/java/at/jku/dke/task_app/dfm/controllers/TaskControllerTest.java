@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -46,7 +47,7 @@ class TaskControllerTest {
 
         var group = this.groupRepository.save(new DfmTaskGroup(1L, TaskStatus.APPROVED, 1, 10));
         this.taskGroupId = group.getId();
-        this.taskId = this.repository.save(new DfmTask(1L, BigDecimal.TWO, TaskStatus.APPROVED, group, 5)).getId();
+        this.taskId = this.repository.save(new DfmTask(1L, BigDecimal.TWO, TaskStatus.APPROVED, group, "fact Sales { profit; };")).getId();
     }
 
     //#region --- GET ---
@@ -64,7 +65,8 @@ class TaskControllerTest {
             .log().ifValidationFails()
             .statusCode(200)
             .contentType(ContentType.JSON)
-            .body("solution", equalTo(5));
+            .body("solution", equalTo("fact Sales { profit; };"))
+            .body("evaluationCriteria", hasSize(0));
     }
 
     @Test
@@ -105,7 +107,8 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.CRUD_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED, new ModifyDfmTaskDto(6)))
+            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+                new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
             .post("/api/task/{id}", this.taskId + 2)
@@ -125,7 +128,8 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.CRUD_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "", TaskStatus.APPROVED, new ModifyDfmTaskDto(6)))
+            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "", TaskStatus.APPROVED,
+                new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
             .post("/api/task/{id}", this.taskId + 2)
@@ -156,7 +160,8 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.SUBMIT_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED, new ModifyDfmTaskDto(6)))
+            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+                new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
             .post("/api/task/{id}", this.taskId + 2)
@@ -174,7 +179,8 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.CRUD_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED, new ModifyDfmTaskDto(9)))
+            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+                new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
             .put("/api/task/{id}", this.taskId)
@@ -193,7 +199,8 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.CRUD_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED, new ModifyDfmTaskDto(9)))
+            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+                new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
             .put("/api/task/{id}", this.taskId + 1)
@@ -209,7 +216,8 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.CRUD_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "sql", TaskStatus.APPROVED, new ModifyDfmTaskDto(9)))
+            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "sql", TaskStatus.APPROVED,
+                new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
             .put("/api/task/{id}", this.taskId)
@@ -240,7 +248,8 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.SUBMIT_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED, new ModifyDfmTaskDto(9)))
+            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+                new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
             .put("/api/task/{id}", this.taskId)
@@ -298,13 +307,15 @@ class TaskControllerTest {
     @Test
     void mapToDto() {
         // Arrange
-        var task = new DfmTask(42);
+        var task = new DfmTask("fact Sales { profit; };");
 
         // Act
         var result = new TaskController(null).mapToDto(task);
 
         // Assert
-        assertEquals(42, result.solution());
+        assertEquals("fact Sales { profit; };", result.solution());
+        assertNotNull(result.evaluationCriteria());
+        assertTrue(result.evaluationCriteria().isEmpty());
     }
 
 }
