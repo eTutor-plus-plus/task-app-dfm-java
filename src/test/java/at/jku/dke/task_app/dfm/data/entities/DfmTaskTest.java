@@ -12,11 +12,11 @@ class DfmTaskTest {
     @Test
     void testConstructor1() {
         // Arrange
-        final int expected = 42;
+        final String expected = "fact Sales { profit; };";
 
         // Act
         var task = new DfmTask(expected);
-        int actual = task.getSolution();
+        String actual = task.getSolution();
 
         // Assert
         assertEquals(expected, actual);
@@ -25,7 +25,7 @@ class DfmTaskTest {
     @Test
     void testConstructor2() {
         // Arrange
-        final int expected = 42;
+        final String expected = "fact Sales { profit; };";
         final BigDecimal maxPoints = BigDecimal.TEN;
         final TaskStatus status = TaskStatus.APPROVED;
         final DfmTaskGroup taskGroup = new DfmTaskGroup();
@@ -33,7 +33,7 @@ class DfmTaskTest {
 
         // Act
         var task = new DfmTask(maxPoints, status, taskGroup, expected);
-        int actualSolution = task.getSolution();
+        String actualSolution = task.getSolution();
         BigDecimal actualMaxPoints = task.getMaxPoints();
         TaskStatus actualStatus = task.getStatus();
         DfmTaskGroup actualTaskGroup = task.getTaskGroup();
@@ -48,7 +48,7 @@ class DfmTaskTest {
     @Test
     void testConstructor3() {
         // Arrange
-        final int expected = 42;
+        final String expected = "fact Sales { profit; };";
         final BigDecimal maxPoints = BigDecimal.TEN;
         final TaskStatus status = TaskStatus.APPROVED;
         final DfmTaskGroup taskGroup = new DfmTaskGroup();
@@ -58,7 +58,7 @@ class DfmTaskTest {
         // Act
         var task = new DfmTask(id, maxPoints, status, taskGroup, expected);
         long actualId = task.getId();
-        int actualSolution = task.getSolution();
+        String actualSolution = task.getSolution();
         BigDecimal actualMaxPoints = task.getMaxPoints();
         TaskStatus actualStatus = task.getStatus();
         DfmTaskGroup actualTaskGroup = task.getTaskGroup();
@@ -75,11 +75,11 @@ class DfmTaskTest {
     void testGetSetSolution() {
         // Arrange
         var task = new DfmTask();
-        final int expected = 42;
+        final String expected = "fact Sales { profit; };";
 
         // Act
         task.setSolution(expected);
-        final int actual = task.getSolution();
+        final String actual = task.getSolution();
 
         // Assert
         assertEquals(expected, actual);

@@ -6,6 +6,10 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
+import java.util.ArrayList;
+import java.util.List;
 
 import java.math.BigDecimal;
 
@@ -16,8 +20,11 @@ import java.math.BigDecimal;
 @Table(name = "task")
 public class DfmTask extends BaseTaskInGroup<DfmTaskGroup> {
     @NotNull
-    @Column(name = "solution", nullable = false)
-    private Integer solution;
+    @Column(name = "solution", nullable = false, length = 5000)
+    private String solution;
+
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private final List<DfmEvaluationCriterion> evaluationCriteria = new ArrayList<>();
 
     /**
      * Creates a new instance of class {@link DfmTask}.
@@ -30,7 +37,7 @@ public class DfmTask extends BaseTaskInGroup<DfmTaskGroup> {
      *
      * @param solution The solution.
      */
-    public DfmTask(Integer solution) {
+    public DfmTask(String solution) {
         this.solution = solution;
     }
 
@@ -42,7 +49,7 @@ public class DfmTask extends BaseTaskInGroup<DfmTaskGroup> {
      * @param taskGroup The task group.
      * @param solution  The solution.
      */
-    public DfmTask(BigDecimal maxPoints, TaskStatus status, DfmTaskGroup taskGroup, Integer solution) {
+    public DfmTask(BigDecimal maxPoints, TaskStatus status, DfmTaskGroup taskGroup, String solution) {
         super(maxPoints, status, taskGroup);
         this.solution = solution;
     }
@@ -56,7 +63,7 @@ public class DfmTask extends BaseTaskInGroup<DfmTaskGroup> {
      * @param taskGroup The task group.
      * @param solution  The solution.
      */
-    public DfmTask(Long id, BigDecimal maxPoints, TaskStatus status, DfmTaskGroup taskGroup, Integer solution) {
+    public DfmTask(Long id, BigDecimal maxPoints, TaskStatus status, DfmTaskGroup taskGroup, String solution) {
         super(id, maxPoints, status, taskGroup);
         this.solution = solution;
     }
@@ -66,7 +73,7 @@ public class DfmTask extends BaseTaskInGroup<DfmTaskGroup> {
      *
      * @return The solution.
      */
-    public Integer getSolution() {
+    public String getSolution() {
         return solution;
     }
 
@@ -75,7 +82,19 @@ public class DfmTask extends BaseTaskInGroup<DfmTaskGroup> {
      *
      * @param solution The solution.
      */
-    public void setSolution(Integer solution) {
+    public void setSolution(String solution) {
         this.solution = solution;
+    }
+
+    public List<DfmEvaluationCriterion> getEvaluationCriteria() {
+        return evaluationCriteria;
+    }
+
+    public void replaceEvaluationCriteria(List<DfmEvaluationCriterion> criteria) {
+        evaluationCriteria.clear();
+        criteria.forEach(criterion -> {
+            criterion.setTask(this);
+            evaluationCriteria.add(criterion);
+        });
     }
 }

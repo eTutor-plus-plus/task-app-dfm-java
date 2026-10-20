@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.AssertTrue;
 
 /**
  * Represents a dfm task group.
@@ -23,6 +24,11 @@ public class DfmTaskGroup extends BaseTaskGroup {
     @NotNull
     @Column(name = "max_number", nullable = false)
     private Integer maxNumber;
+
+    @AssertTrue(message = "Minimum number must not exceed maximum number.")
+    public boolean isNumberRangeValid() {
+        return minNumber != null && maxNumber != null && minNumber <= maxNumber;
+    }
 
     /**
      * Creates a new instance of class {@link DfmTaskGroup}.

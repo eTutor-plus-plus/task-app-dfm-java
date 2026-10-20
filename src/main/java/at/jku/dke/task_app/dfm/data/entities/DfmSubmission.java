@@ -14,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 @Table(name = "submission")
 public class DfmSubmission extends BaseSubmission<DfmTask> {
     @NotNull
-    @Column(name = "submission", nullable = false)
+    @Column(name = "submission", nullable = false, length = 5000)
     private String submission;
 
     /**
