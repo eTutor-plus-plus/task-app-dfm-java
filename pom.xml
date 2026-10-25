@@ -30,6 +30,10 @@
             <id>github-starter</id>
             <url>https://maven.pkg.github.com/eTutor-plus-plus/task-app-starter</url>
         </repository>
+        <repository>
+            <id>github-core</id>
+            <url>https://maven.pkg.github.com/eTutor-plus-plus/task-app-dfm-core</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -37,6 +41,11 @@
             <groupId>at.jku.dke.etutor</groupId>
             <artifactId>etutor-task-app-starter</artifactId>
             <version>1.2.2</version>
+        </dependency>
+        <dependency>
+            <groupId>at.jku.dke.etutor</groupId>
+            <artifactId>task-app-dfm-core</artifactId>
+            <version>1.0.0</version>
         </dependency>
 
         <!-- Spring -->

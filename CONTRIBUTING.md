@@ -122,6 +122,8 @@ Following dependencies are required to build and run this project:
 
 For a description how maven must be configured to be able to download the `etutor-task-app-starter` dependency, see following URL: https://github.com/eTutor-plus-plus/task-app-starter#usage
 
+This project also downloads `task-app-dfm-core` from GitHub Packages. Configure a Maven server with the id `github-core` and a token with package read access. The package must grant this repository access.
+
 ## Styleguides
 
 ### Versioning
