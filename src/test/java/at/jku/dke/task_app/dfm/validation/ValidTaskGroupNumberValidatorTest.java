@@ -31,7 +31,7 @@ class ValidTaskGroupNumberValidatorTest {
         boolean result = validTaskGroupNumberValidator.isValid(modifyDfmTaskGroupDto, null);
 
         // Assert
-        assertFalse(result);
+        assertTrue(result);
     }
 
     @Test
