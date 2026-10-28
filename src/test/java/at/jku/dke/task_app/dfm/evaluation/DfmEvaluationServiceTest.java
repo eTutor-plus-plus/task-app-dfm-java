@@ -4,6 +4,8 @@ import at.jku.dke.etutor.task_app.dto.SubmissionMode;
 import at.jku.dke.task_app.dfm.data.entities.DfmEvaluationCriterion;
 import at.jku.dke.task_app.dfm.data.repositories.DfmTaskRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 
@@ -42,6 +44,31 @@ class DfmEvaluationServiceTest {
         assertEquals(BigDecimal.ZERO, result.points());
         assertEquals("Your solution is incorrect.", result.generalFeedback());
         assertTrue(!result.criteria().get(0).passed());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SubmissionMode.class, names = {"RUN", "DIAGNOSE"})
+    void includesSvgVisualizationForRunAndDiagnose(SubmissionMode mode) {
+        var source = "fact Sales { profit; }; dimension Product { product - category; }; Sales - Product;";
+
+        var result = service.evaluateDfm(source, source, BigDecimal.TEN, mode, 1, Locale.ENGLISH);
+
+        var visualizations = result.criteria().stream()
+            .filter(criterion -> criterion.feedback().startsWith("<svg "))
+            .toList();
+        assertEquals(1, visualizations.size());
+        assertTrue(visualizations.get(0).feedback().contains("</svg>"));
+        assertTrue(visualizations.get(0).passed());
+    }
+
+    @Test
+    void omitsSvgVisualizationWhenFeedbackIsDisabled() {
+        var source = "fact Sales { profit; };";
+
+        var result = service.evaluateDfm(source, source, BigDecimal.TEN,
+            SubmissionMode.RUN, 0, Locale.ENGLISH);
+
+        assertTrue(result.criteria().stream().noneMatch(criterion -> criterion.feedback().startsWith("<svg ")));
     }
 
     @Test
