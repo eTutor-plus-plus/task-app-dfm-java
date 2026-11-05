@@ -184,7 +184,8 @@ public class EvaluationService {
             }
             return expectedFact.getDimensions().stream().allMatch(expectedDimension ->
                 actualFact.getDimensions().stream().anyMatch(actualDimension ->
-                    matches(actualDimension, expectedDimension, partialSolution, allowIncorrectFactClass)));
+                    expectedDimension.hasSameFactConnectionLabel(actualDimension)
+                        && matches(actualDimension, expectedDimension, partialSolution, allowIncorrectFactClass)));
         }
         if (actual instanceof DimensionElement actualDimension && expected instanceof DimensionElement expectedDimension) {
             return partialSolution

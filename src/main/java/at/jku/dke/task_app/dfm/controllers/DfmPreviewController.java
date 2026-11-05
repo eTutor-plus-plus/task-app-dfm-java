@@ -58,7 +58,8 @@ public class DfmPreviewController {
             .map(node -> new DfmGraphDto.Node(node.id(), node.label(), toNodeType(node.kind()), node.optional(), node.details()))
             .toList();
         var edges = graph.edges().stream()
-            .map(edge -> new DfmGraphDto.Edge(edge.source(), edge.target(), edge.connectionType().name(), edge.optional()))
+            .map(edge -> new DfmGraphDto.Edge(edge.source(), edge.target(), edge.connectionType().name(),
+                edge.optional(), edge.label()))
             .toList();
         return new DfmGraphDto(nodes, edges);
     }

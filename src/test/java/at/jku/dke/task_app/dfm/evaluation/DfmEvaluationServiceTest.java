@@ -46,6 +46,23 @@ class DfmEvaluationServiceTest {
     }
 
     @Test
+    void connectionDescriptionsAreRelevantForGrading() {
+        var solution = "fact S { m; }; dimension C { customer -[customercity]- city; }; S - C;";
+
+        var same = service.evaluateDfm(solution, solution, BigDecimal.TEN, SubmissionMode.SUBMIT, 0, Locale.ENGLISH);
+        var otherLabel = service.evaluateDfm(solution,
+            "fact S { m; }; dimension C { customer -[livesin]- city; }; S - C;",
+            BigDecimal.TEN, SubmissionMode.SUBMIT, 0, Locale.ENGLISH);
+        var noLabel = service.evaluateDfm(solution,
+            "fact S { m; }; dimension C { customer - city; }; S - C;",
+            BigDecimal.TEN, SubmissionMode.SUBMIT, 0, Locale.ENGLISH);
+
+        assertEquals(BigDecimal.TEN, same.points());
+        assertEquals(BigDecimal.ZERO, otherLabel.points());
+        assertEquals(BigDecimal.ZERO, noLabel.points());
+    }
+
+    @Test
     void reportsInvalidDfmSyntaxWithoutAwardingPoints() {
         var result = service.evaluateDfm(
             "fact Sales { profit; };",
@@ -99,6 +116,39 @@ class DfmEvaluationServiceTest {
         assertEquals(BigDecimal.TEN, result.points());
         assertEquals(3, result.criteria().size());
         assertTrue(result.criteria().stream().allMatch(c -> c.passed()));
+    }
+
+    @Test
+    void factDimensionConnectionDescriptionsAreRelevantForGrading() {
+        var solution = "fact S { m; }; dimension T { d; }; S -[soldat]- T;";
+
+        var same = service.evaluateDfm(solution, solution, BigDecimal.TEN, SubmissionMode.SUBMIT, 0, Locale.ENGLISH);
+        var otherLabel = service.evaluateDfm(solution, "fact S { m; }; dimension T { d; }; S -[x]- T;",
+            BigDecimal.TEN, SubmissionMode.SUBMIT, 0, Locale.ENGLISH);
+        var noLabel = service.evaluateDfm(solution, "fact S { m; }; dimension T { d; }; S - T;",
+            BigDecimal.TEN, SubmissionMode.SUBMIT, 0, Locale.ENGLISH);
+
+        assertEquals(BigDecimal.TEN, same.points());
+        assertEquals(BigDecimal.ZERO, otherLabel.points());
+        assertEquals(BigDecimal.ZERO, noLabel.points());
+    }
+
+    @Test
+    void dimensionCriterionIgnoresFactConnectionDescription() {
+        var criteria = java.util.List.of(
+            new DfmEvaluationCriterion("Dimension", BigDecimal.TEN, "dimension T { d; };", false, false),
+            new DfmEvaluationCriterion("Connection", BigDecimal.TEN,
+                "fact S { m; }; dimension T { d; }; S -[soldat]- T;", false, false));
+
+        var withLabel = service.evaluateDfm("fact S { m; }; dimension T { d; }; S -[soldat]- T;",
+            "fact S { m; }; dimension T { d; }; S -[soldat]- T;",
+            BigDecimal.valueOf(20), SubmissionMode.DIAGNOSE, 3, Locale.ENGLISH, criteria);
+        var withoutLabel = service.evaluateDfm("fact S { m; }; dimension T { d; }; S -[soldat]- T;",
+            "fact S { m; }; dimension T { d; }; S - T;",
+            BigDecimal.valueOf(20), SubmissionMode.DIAGNOSE, 3, Locale.ENGLISH, criteria);
+
+        assertEquals(BigDecimal.valueOf(20), withLabel.points());
+        assertEquals(BigDecimal.TEN, withoutLabel.points());
     }
 
     private static MessageSource messages() {

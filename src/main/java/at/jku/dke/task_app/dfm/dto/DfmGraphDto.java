@@ -46,7 +46,8 @@ public record DfmGraphDto(List<Node> nodes, List<Edge> edges) {
      * @param target         The identifier of the target node.
      * @param connectionType The connection type.
      * @param optional       Whether the connection is optional.
+     * @param label          The description of the connection, or {@code null}.
      */
-    public record Edge(String source, String target, String connectionType, boolean optional) {
+    public record Edge(String source, String target, String connectionType, boolean optional, String label) {
     }
 }

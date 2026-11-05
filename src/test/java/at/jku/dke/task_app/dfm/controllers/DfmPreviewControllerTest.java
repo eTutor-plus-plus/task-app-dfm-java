@@ -44,6 +44,18 @@ class DfmPreviewControllerTest {
     }
 
     @Test
+    void parseReturnsConnectionLabelsInGraph() {
+        var response = controller.parse("""
+            fact Sales { Revenue; };
+            dimension Customer { customer -[customercity]- city; };
+            Sales - Customer;
+            """);
+
+        var graph = assertInstanceOf(DfmGraphDto.class, response.getBody());
+        assertTrue(graph.edges().stream().anyMatch(e -> "customercity".equals(e.label())));
+    }
+
+    @Test
     void parseReturnsBadRequestForInvalidModel() {
         var response = controller.parse("not a valid DFM model");
 
