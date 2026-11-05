@@ -2,7 +2,7 @@
 
 This application provides a REST interface for tasks of type **Dimensional Fact Model (DFM)**.
 
-Students submit a DFM model in the supported textual notation. The model can contain facts with measures and descriptives, dimensions with hierarchies and levels, and fact-dimension connections. The submitted model is parsed and evaluated against the task solution. Depending on the task configuration, the complete model is compared structurally or individual evaluation criteria are checked for partial credit. Criteria can optionally allow partial solutions or an incorrect fact class. Diagnostic feedback can include criterion-specific results and an SVG visualization of the submitted model.
+Students submit a DFM model in the supported textual notation. The model can contain facts with measures and descriptives, dimensions with hierarchies and levels, and fact-dimension connections. The submitted model is parsed and evaluated against the task solution. Line comments starting with `//` are ignored by the parser and do not affect the evaluation. Depending on the task configuration, the complete model is compared structurally or individual evaluation criteria are checked for partial credit. Criteria can optionally allow partial solutions or an incorrect fact class. Diagnostic feedback can include criterion-specific results and an SVG visualization of the submitted model.
 
 This project **can** be used as a template for new task apps. Replace the task type name with the name of your task type.
 

@@ -35,6 +35,17 @@ class DfmEvaluationServiceTest {
     }
 
     @Test
+    void ignoresCommentsWhenComparingDfmModels() {
+        var result = service.evaluateDfm(
+            "// solution\nfact Sales { profit; };",
+            "fact Sales { profit; }; // my answer\n",
+            BigDecimal.TEN, SubmissionMode.SUBMIT, 3, Locale.ENGLISH);
+
+        assertEquals(BigDecimal.TEN, result.points());
+        assertTrue(result.criteria().get(0).passed());
+    }
+
+    @Test
     void reportsInvalidDfmSyntaxWithoutAwardingPoints() {
         var result = service.evaluateDfm(
             "fact Sales { profit; };",

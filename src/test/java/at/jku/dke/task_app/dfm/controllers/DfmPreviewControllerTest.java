@@ -31,6 +31,19 @@ class DfmPreviewControllerTest {
     }
 
     @Test
+    void parseAcceptsLineComments() {
+        var response = controller.parse("""
+            // model
+            fact Sales { Revenue; }; // measure
+            dimension Time { Day - Month; };
+            Sales - Time; // connection
+            """);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertInstanceOf(DfmGraphDto.class, response.getBody());
+    }
+
+    @Test
     void parseReturnsBadRequestForInvalidModel() {
         var response = controller.parse("not a valid DFM model");
 
