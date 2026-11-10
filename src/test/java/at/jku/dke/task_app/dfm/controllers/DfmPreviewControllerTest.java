@@ -56,6 +56,20 @@ class DfmPreviewControllerTest {
     }
 
     @Test
+    void parseReturnsRecursiveHierarchyAsSelfLoop() {
+        var response = controller.parse("""
+            fact Sales { profit; };
+            dimension SalesRepresentative { salesRepresentative -[supervisor]-> salesRepresentative; };
+            Sales - SalesRepresentative;
+            """);
+
+        var graph = assertInstanceOf(DfmGraphDto.class, response.getBody());
+        var loop = graph.edges().stream().filter(e -> "supervisor".equals(e.label())).findFirst().orElseThrow();
+        assertEquals(loop.source(), loop.target());
+        assertEquals("CONVERGENCE", loop.connectionType());
+    }
+
+    @Test
     void parseReturnsBadRequestForInvalidModel() {
         var response = controller.parse("not a valid DFM model");
 
