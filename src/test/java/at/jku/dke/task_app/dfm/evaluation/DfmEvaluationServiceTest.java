@@ -6,6 +6,7 @@ import at.jku.dke.task_app.dfm.data.repositories.DfmTaskRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 
@@ -149,6 +150,118 @@ class DfmEvaluationServiceTest {
 
         assertEquals(BigDecimal.valueOf(20), withLabel.points());
         assertEquals(BigDecimal.TEN, withoutLabel.points());
+    }
+
+    private static final String SHARED_MODEL = """
+        fact Sales { profit; };
+        hierarchy VAT { VAT - vatClass; };
+        hierarchy city { city = region; city - country - {cross} VAT; };
+        dimension city { {shared} city; };
+        dimension customer { customer -[customerCity]- {shared} city; };
+        dimension product { product - category - {cross} VAT; };
+        Sales -[storeCity]- city;
+        Sales - customer;
+        Sales - product;
+        """;
+
+    @Test
+    void hierarchyDeclarationOrderIsIrrelevantForGrading() {
+        var reordered = """
+            fact Sales { profit; };
+            hierarchy city { city - country - {cross} VAT; city = region; };
+            hierarchy VAT { VAT - vatClass; };
+            dimension city { {shared} city; };
+            dimension customer { customer -[customerCity]- {shared} city; };
+            dimension product { product - category - {cross} VAT; };
+            Sales -[storeCity]- city;
+            Sales - customer;
+            Sales - product;
+            """;
+
+        var result = service.evaluateDfm(SHARED_MODEL, reordered, BigDecimal.TEN, SubmissionMode.SUBMIT, 0,
+            Locale.ENGLISH);
+
+        assertEquals(BigDecimal.TEN, result.points());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "hierarchy city { city - region; city - country - {cross} VAT; };",
+        "hierarchy city { city = region; city - country; };",
+        "hierarchy city { city = region; city - country - {shared} VAT; };",
+        "hierarchy city { city = region; city - country - {cross} VAT; city - zip; };"
+    })
+    void differentHierarchyDeclarationsAreNotEqual(String city) {
+        var input = SHARED_MODEL.replace("hierarchy city { city = region; city - country - {cross} VAT; };", city);
+
+        var result = service.evaluateDfm(SHARED_MODEL, input, BigDecimal.TEN, SubmissionMode.SUBMIT, 0,
+            Locale.ENGLISH);
+
+        assertEquals(BigDecimal.ZERO, result.points());
+    }
+
+    @Test
+    void missingHierarchyDeclarationIsReportedAsSyntaxError() {
+        var input = SHARED_MODEL.replace("hierarchy VAT { VAT - vatClass; };", "");
+
+        var result = service.evaluateDfm(SHARED_MODEL, input, BigDecimal.TEN, SubmissionMode.DIAGNOSE, 3,
+            Locale.ENGLISH);
+
+        assertEquals(BigDecimal.ZERO, result.points());
+        assertTrue(!result.criteria().get(0).passed());
+        assertTrue(result.criteria().get(0).feedback().contains("Hierarchy VAT is not declared"));
+    }
+
+    @Test
+    void awardsCriterionPointsForSharedHierarchies() {
+        var criteria = java.util.List.of(
+            new DfmEvaluationCriterion("Customer", BigDecimal.valueOf(3),
+                "hierarchy city { city; }; dimension customer { customer -[customerCity]- {shared} city; };",
+                false, false),
+            new DfmEvaluationCriterion("City", BigDecimal.valueOf(4),
+                "hierarchy VAT { VAT; }; hierarchy city { city = region; city - country - {cross} VAT; };",
+                false, false),
+            new DfmEvaluationCriterion("VAT", BigDecimal.valueOf(3),
+                "hierarchy VAT { VAT - vatClass; };", true, false));
+
+        var result = service.evaluateDfm(SHARED_MODEL, SHARED_MODEL, BigDecimal.TEN, SubmissionMode.DIAGNOSE, 3,
+            Locale.ENGLISH, criteria);
+
+        assertEquals(BigDecimal.TEN, result.points());
+        assertTrue(result.criteria().stream().allMatch(c -> c.passed()));
+    }
+
+    @Test
+    void hierarchyCriterionIsNotConfusedWithDimensionOfTheSameName() {
+        var criteria = java.util.List.of(
+            new DfmEvaluationCriterion("City", BigDecimal.TEN,
+                "hierarchy city { city = region; city - country - {cross} VAT; }; hierarchy VAT { VAT; };",
+                false, false));
+        var otherHierarchy = SHARED_MODEL.replace("city = region;", "city - region;");
+
+        var passed = service.evaluateDfm(SHARED_MODEL, SHARED_MODEL, BigDecimal.TEN, SubmissionMode.DIAGNOSE, 3,
+            Locale.ENGLISH, criteria);
+        var failed = service.evaluateDfm(SHARED_MODEL, otherHierarchy, BigDecimal.TEN, SubmissionMode.DIAGNOSE, 3,
+            Locale.ENGLISH, criteria);
+
+        assertEquals(BigDecimal.TEN, passed.points());
+        assertEquals(BigDecimal.ZERO, failed.points());
+    }
+
+    @Test
+    void partialHierarchyCriterionAcceptsAdditionalChains() {
+        var criteria = java.util.List.of(
+            new DfmEvaluationCriterion("City", BigDecimal.TEN, "hierarchy city { city = region; };", true, false));
+        var withExtraChain = SHARED_MODEL.replace("city = region;", "city = region; city - zip;");
+        var withoutRegion = SHARED_MODEL.replace("city = region;", "city - zip;");
+
+        var accepted = service.evaluateDfm(SHARED_MODEL, withExtraChain, BigDecimal.TEN, SubmissionMode.DIAGNOSE, 3,
+            Locale.ENGLISH, criteria);
+        var rejected = service.evaluateDfm(SHARED_MODEL, withoutRegion, BigDecimal.TEN, SubmissionMode.DIAGNOSE, 3,
+            Locale.ENGLISH, criteria);
+
+        assertEquals(BigDecimal.TEN, accepted.points());
+        assertEquals(BigDecimal.ZERO, rejected.points());
     }
 
     private static MessageSource messages() {

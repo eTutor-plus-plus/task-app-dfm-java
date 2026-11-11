@@ -9,6 +9,8 @@ import at.jku.dke.task_app.dfm.dto.DfmSubmissionDto;
 import at.jku.dke.dfm.core.models.ast.AbstractElement;
 import at.jku.dke.dfm.core.models.ast.DimensionElement;
 import at.jku.dke.dfm.core.models.ast.FactElement;
+import at.jku.dke.dfm.core.models.ast.Hierarchy;
+import at.jku.dke.dfm.core.models.ast.HierarchyDefinitionElement;
 import at.jku.dke.dfm.core.visualization.DfmVisualizationService;
 import at.jku.dke.dfm.core.parser.DfmParseException;
 import at.jku.dke.dfm.core.parser.DfmParser;
@@ -149,11 +151,17 @@ public class EvaluationService {
             String feedback;
             try {
                 var expected = parser.parse(criterion.getSubtree());
-                passed = expected.stream().allMatch(element ->
-                    findElement(element.getName(), actual)
-                        .map(candidate -> matches(candidate, element, criterion.isPartialSolution(),
-                            criterion.isAllowIncorrectFactClass()))
-                        .orElse(false));
+                // a declaration that another element of the subtree refers to only makes the reference
+                // resolvable; its content is checked by a criterion of its own
+                var referenced = referencedHierarchies(expected);
+                passed = expected.stream()
+                    .filter(element -> !(element instanceof HierarchyDefinitionElement
+                        && referenced.contains(element.getName())))
+                    .allMatch(element ->
+                        findElement(element, actual)
+                            .map(candidate -> matches(candidate, element, criterion.isPartialSolution(),
+                                criterion.isAllowIncorrectFactClass()))
+                            .orElse(false));
                 feedback = messageSource.getMessage(
                     passed ? "criterium.evaluation.passed" : "criterium.evaluation.notMet", null, locale);
             } catch (DfmParseException ex) {
@@ -192,16 +200,50 @@ public class EvaluationService {
                 ? actualDimension.containsAllHierarchies(expectedDimension)
                 : actualDimension.structurallyEquals(expectedDimension);
         }
+        if (actual instanceof HierarchyDefinitionElement actualDefinition
+            && expected instanceof HierarchyDefinitionElement expectedDefinition) {
+            return partialSolution
+                ? actualDefinition.containsAllHierarchies(expectedDefinition)
+                : actualDefinition.structurallyEquals(expectedDefinition);
+        }
         return !partialSolution && expected.structurallyEquals(actual);
     }
 
-    private java.util.Optional<AbstractElement> findElement(String name, List<AbstractElement> elements) {
+    private java.util.Set<String> referencedHierarchies(List<AbstractElement> elements) {
+        var names = new java.util.HashSet<String>();
         for (var element : elements) {
-            if (element.getName().equals(name)) {
+            collectReferencedHierarchies(element, names);
+        }
+        return names;
+    }
+
+    private void collectReferencedHierarchies(AbstractElement element, java.util.Set<String> names) {
+        List<Hierarchy> chains = List.of();
+        if (element instanceof FactElement fact) {
+            fact.getDimensions().forEach(dimension -> collectReferencedHierarchies(dimension, names));
+        } else if (element instanceof DimensionElement dimension) {
+            chains = dimension.getHierarchies();
+        } else if (element instanceof HierarchyDefinitionElement definition) {
+            chains = definition.getHierarchies();
+        }
+        for (var chain : chains) {
+            for (var level = chain.getHead(); level != null; level = level.getNextLevel()) {
+                if (level.getLevelType().isReference()) {
+                    names.add(level.getName());
+                }
+            }
+        }
+    }
+
+    // elements of different kinds may share a name, e.g. "dimension city" and "hierarchy city"
+    private java.util.Optional<AbstractElement> findElement(AbstractElement expected, List<AbstractElement> elements) {
+        for (var element : elements) {
+            if (element.getName().equals(expected.getName())
+                && element.getElementType() == expected.getElementType()) {
                 return java.util.Optional.of(element);
             }
             if (element instanceof FactElement fact) {
-                var nested = findElement(name, new ArrayList<>(fact.getDimensions()));
+                var nested = findElement(expected, new ArrayList<>(fact.getDimensions()));
                 if (nested.isPresent()) {
                     return nested;
                 }
@@ -211,11 +253,21 @@ public class EvaluationService {
     }
 
     private boolean modelsEqual(List<AbstractElement> expected, List<AbstractElement> actual) {
-        if (expected.size() != actual.size()) {
+        // hierarchy declarations are compared by name, independent of their order
+        var expectedDefinitions = expected.stream().filter(HierarchyDefinitionElement.class::isInstance).toList();
+        var actualDefinitions = actual.stream().filter(HierarchyDefinitionElement.class::isInstance).toList();
+        if (expectedDefinitions.size() != actualDefinitions.size() || !expectedDefinitions.stream().allMatch(
+            definition -> actualDefinitions.stream().anyMatch(definition::structurallyEquals))) {
             return false;
         }
-        for (int i = 0; i < expected.size(); i++) {
-            if (!expected.get(i).structurallyEquals(actual.get(i))) {
+
+        var expectedOthers = expected.stream().filter(element -> !(element instanceof HierarchyDefinitionElement)).toList();
+        var actualOthers = actual.stream().filter(element -> !(element instanceof HierarchyDefinitionElement)).toList();
+        if (expectedOthers.size() != actualOthers.size()) {
+            return false;
+        }
+        for (int i = 0; i < expectedOthers.size(); i++) {
+            if (!expectedOthers.get(i).structurallyEquals(actualOthers.get(i))) {
                 return false;
             }
         }

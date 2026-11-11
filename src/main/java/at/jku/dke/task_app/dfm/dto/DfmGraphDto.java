@@ -24,7 +24,15 @@ public record DfmGraphDto(List<Node> nodes, List<Edge> edges) {
         /**
          * A descriptive attribute.
          */
-        DESCRIPTIVE
+        DESCRIPTIVE,
+        /**
+         * The entry level of a shared hierarchy.
+         */
+        SHARED,
+        /**
+         * The entry level of a hierarchy that is used as cross-dimensional attribute.
+         */
+        CROSS
     }
 
     /**
