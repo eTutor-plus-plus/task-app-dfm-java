@@ -135,6 +135,57 @@ class DfmEvaluationServiceTest {
     }
 
     @Test
+    void factConnectionOptionalityMultiplicityAndRolesAreRelevantForGrading() {
+        var prefix = "fact S { m; }; dimension T { d; }; ";
+        var solution = prefix + "S (-[shipping]-) T; S =[billing]= T;";
+        var same = service.evaluateDfm(solution, prefix + "S =[billing]= T; S (-[shipping]-) T;",
+            BigDecimal.TEN, SubmissionMode.SUBMIT, 0, Locale.ENGLISH);
+        var missingOptionality = service.evaluateDfm(solution, prefix + "S -[shipping]- T; S =[billing]= T;",
+            BigDecimal.TEN, SubmissionMode.SUBMIT, 0, Locale.ENGLISH);
+        var missingMultiplicity = service.evaluateDfm(solution, prefix + "S (-[shipping]-) T; S -[billing]- T;",
+            BigDecimal.TEN, SubmissionMode.SUBMIT, 0, Locale.ENGLISH);
+        assertEquals(BigDecimal.TEN, same.points());
+        assertEquals(BigDecimal.ZERO, missingOptionality.points());
+        assertEquals(BigDecimal.ZERO, missingMultiplicity.points());
+    }
+
+    @Test
+    void factCriterionMatchesEachExpectedConnectionOnlyOnce() {
+        var criterion = new DfmEvaluationCriterion("Connections", BigDecimal.TEN,
+            "fact S { m; }; dimension T { d; }; S - T; S - T;", true, false);
+        var result = service.evaluateDfm("fact S { m; };", "fact S { m; }; dimension T { d; }; S - T;",
+            BigDecimal.TEN, SubmissionMode.SUBMIT, 0, Locale.ENGLISH, java.util.List.of(criterion));
+        assertEquals(BigDecimal.ZERO, result.points());
+    }
+
+    @Test
+    void partialFactCriterionFindsMatchingAssignmentIndependentOfDimensionOrder() {
+        var criterion = new DfmEvaluationCriterion("Connections", BigDecimal.TEN,
+            "fact S { m; }; dimension Base { a - b; }; dimension Full { a - b; a - c; }; S - Base; S - Full;",
+            true, false);
+        var actual = "fact S { m; }; dimension Full { a - b; a - c; }; dimension Base { a - b; }; S - Full; S - Base;";
+        var result = service.evaluateDfm("fact S { m; };", actual,
+            BigDecimal.TEN, SubmissionMode.SUBMIT, 0, Locale.ENGLISH, java.util.List.of(criterion));
+        assertEquals(BigDecimal.TEN, result.points());
+    }
+
+    @Test
+    void factCriterionDistinguishesSharedFromSeparateDimensions() {
+        var expected = "fact F { m; }; dimension D { d - city; }; F -[shipping]- D; F -[billing]- D;";
+        var separate = "fact F { m; }; dimension D1 { d - city; }; dimension D2 { d - city; }; "
+            + "F -[shipping]- D1; F -[billing]- D2;";
+        var criterion = new DfmEvaluationCriterion("Dimension roles", BigDecimal.TEN, expected, true, false);
+        var result = service.evaluateDfm(expected, separate, BigDecimal.TEN, SubmissionMode.SUBMIT, 0,
+            Locale.ENGLISH, java.util.List.of(criterion));
+        assertEquals(BigDecimal.ZERO, result.points());
+
+        var reverseCriterion = new DfmEvaluationCriterion("Dimension roles", BigDecimal.TEN, separate, true, false);
+        var reverse = service.evaluateDfm(separate, expected, BigDecimal.TEN, SubmissionMode.SUBMIT, 0,
+            Locale.ENGLISH, java.util.List.of(reverseCriterion));
+        assertEquals(BigDecimal.ZERO, reverse.points());
+    }
+
+    @Test
     void dimensionCriterionIgnoresFactConnectionDescription() {
         var criteria = java.util.List.of(
             new DfmEvaluationCriterion("Dimension", BigDecimal.TEN, "dimension T { d; };", false, false),

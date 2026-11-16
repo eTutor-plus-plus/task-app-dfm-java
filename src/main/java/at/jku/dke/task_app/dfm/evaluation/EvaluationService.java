@@ -190,11 +190,11 @@ public class EvaluationService {
             if (partialSolution && expectedFact.getDimensions().isEmpty()) {
                 return true;
             }
-            return expectedFact.getDimensions().stream().allMatch(expectedDimension ->
-                actualFact.getDimensions().stream().anyMatch(actualDimension ->
-                    expectedDimension.hasSameFactConnectionLabel(actualDimension)
-                        && matches(actualDimension, expectedDimension, partialSolution, allowIncorrectFactClass)));
+            return actualFact.containsMatchingDimensionConnections(expectedFact,
+                (actualDimension, expectedDimension) ->
+                    matches(actualDimension, expectedDimension, partialSolution, allowIncorrectFactClass));
         }
+
         if (actual instanceof DimensionElement actualDimension && expected instanceof DimensionElement expectedDimension) {
             return partialSolution
                 ? actualDimension.containsAllHierarchies(expectedDimension)

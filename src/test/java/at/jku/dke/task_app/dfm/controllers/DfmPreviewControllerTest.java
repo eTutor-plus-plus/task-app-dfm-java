@@ -56,6 +56,23 @@ class DfmPreviewControllerTest {
     }
 
     @Test
+    void parseReturnsParallelFactConnections() {
+        var response = controller.parse("""
+            fact Invoice { quantity; };
+            dimension Customer { customer; };
+            Invoice (-[shipping]-) Customer;
+            Invoice =[billing]= Customer;
+            """);
+        var graph = assertInstanceOf(DfmGraphDto.class, response.getBody());
+        var shipping = graph.edges().stream().filter(e -> "shipping".equals(e.label())).findFirst().orElseThrow();
+        var billing = graph.edges().stream().filter(e -> "billing".equals(e.label())).findFirst().orElseThrow();
+        assertEquals(shipping.source(), billing.source());
+        assertEquals(shipping.target(), billing.target());
+        assertTrue(shipping.optional());
+        assertEquals("MULTIPLE", billing.connectionType());
+    }
+
+    @Test
     void parseReturnsRecursiveHierarchyAsSelfLoop() {
         var response = controller.parse("""
             fact Sales { profit; };
@@ -99,6 +116,16 @@ class DfmPreviewControllerTest {
         assertTrue(error.message().contains("Hierarchy missing is not declared"));
         assertEquals(1, error.line());
         assertEquals(28, error.column());
+    }
+
+    @Test
+    void parseRejectsMultipleRecursiveConnection() {
+        var response = controller.parse("dimension D {\n  a =[role]= a;\n};");
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        var error = assertInstanceOf(DfmParseErrorDto.class, response.getBody());
+        assertTrue(error.message().contains("recursive connection cannot be multiple"));
+        assertEquals(2, error.line());
+        assertEquals(14, error.column());
     }
 
     @Test
