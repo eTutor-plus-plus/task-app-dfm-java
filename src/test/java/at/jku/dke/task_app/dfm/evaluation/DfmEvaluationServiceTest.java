@@ -264,6 +264,19 @@ class DfmEvaluationServiceTest {
     }
 
     @Test
+    void hierarchyWithASingleIncomingConnectionIsReportedAsSyntaxError() {
+        var input = SHARED_MODEL.replace("dimension customer { customer -[customerCity]- {shared} city; };", "")
+            .replace("Sales - customer;", "");
+
+        var result = service.evaluateDfm(SHARED_MODEL, input, BigDecimal.TEN, SubmissionMode.DIAGNOSE, 3,
+            Locale.ENGLISH);
+
+        assertEquals(BigDecimal.ZERO, result.points());
+        assertTrue(!result.criteria().get(0).passed());
+        assertTrue(result.criteria().get(0).feedback().contains("only one connection"));
+    }
+
+    @Test
     void awardsCriterionPointsForSharedHierarchies() {
         var criteria = java.util.List.of(
             new DfmEvaluationCriterion("Customer", BigDecimal.valueOf(3),

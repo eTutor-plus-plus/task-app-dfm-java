@@ -150,7 +150,7 @@ public class EvaluationService {
             boolean passed = false;
             String feedback;
             try {
-                var expected = parser.parse(criterion.getSubtree());
+                var expected = parser.parseFragment(criterion.getSubtree());
                 // a declaration that another element of the subtree refers to only makes the reference
                 // resolvable; its content is checked by a criterion of its own
                 var referenced = referencedHierarchies(expected);

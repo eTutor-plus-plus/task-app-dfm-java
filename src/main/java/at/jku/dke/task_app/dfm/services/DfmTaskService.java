@@ -78,7 +78,7 @@ public class DfmTaskService extends BaseTaskService<DfmTask, ModifyDfmTaskDto> {
             var sum = dto.additionalData().evaluationCriteria().stream()
                 .map(criterion -> {
                     try {
-                        parser.parse(criterion.subtree());
+                        parser.parseFragment(criterion.subtree());
                     } catch (DfmParseException ex) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                             "Invalid DFM evaluation criterion '" + criterion.name() + "'.", ex);

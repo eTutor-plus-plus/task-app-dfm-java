@@ -93,8 +93,10 @@ class DfmPreviewControllerTest {
             hierarchy VAT { VAT - vatClass; };
             hierarchy city { city - country - {cross} VAT; };
             dimension city { {shared} city; };
+            dimension customer { customer -[customerCity]- {shared} city; };
             dimension product { product - category - {cross} VAT; };
             Sales -[storeCity]- city;
+            Sales - customer;
             Sales - product;
             """);
 
@@ -105,6 +107,32 @@ class DfmPreviewControllerTest {
         assertEquals(DfmGraphDto.NodeType.CROSS, vat.type());
         assertEquals(2, graph.edges().stream().filter(e -> e.target().equals(vat.id())).count());
         assertTrue(graph.edges().stream().anyMatch(e -> "storeCity".equals(e.label())));
+    }
+
+    @Test
+    void parseRejectsHierarchyWithASingleIncomingConnection() {
+        var response = controller.parse("hierarchy h { a; };\ndimension d {\n  x - {shared} h;\n};");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        var error = assertInstanceOf(DfmParseErrorDto.class, response.getBody());
+        assertTrue(error.message().contains("only one connection"));
+        assertEquals(3, error.line());
+        assertEquals(16, error.column());
+    }
+
+    @Test
+    void parseAcceptsOneReferenceWithSeveralRolesFromTheFact() {
+        var response = controller.parse("""
+            fact Invoice { quantity; };
+            hierarchy Customer { Customer - City; };
+            dimension Customer { {shared} Customer; };
+            Invoice -[shipping]- Customer;
+            Invoice -[billing]- Customer;
+            """);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        var graph = assertInstanceOf(DfmGraphDto.class, response.getBody());
+        assertEquals(2, graph.edges().stream().filter(e -> e.label() != null).count());
     }
 
     @Test
