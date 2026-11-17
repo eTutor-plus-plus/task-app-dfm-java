@@ -19,4 +19,4 @@ COPY --from=builder /app/application/ ./
 # Spring
 ENV SPRING_PROFILES_ACTIVE=dev
 
-ENTRYPOINT ["java", "-Xmx6g", "org.springframework.boot.loader.launch.JarLauncher"]
+ENTRYPOINT ["java", "-Xmx6g", "-Djava.awt.headless=true", "org.springframework.boot.loader.launch.JarLauncher"]

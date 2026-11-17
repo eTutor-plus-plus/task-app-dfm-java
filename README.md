@@ -2,7 +2,7 @@
 
 This application provides a REST interface for tasks of type **Dimensional Fact Model (DFM)**.
 
-Students submit a DFM model in the supported textual notation. The model can contain facts with measures and descriptives, dimensions with hierarchies and levels, and fact-dimension connections. The submitted model is parsed and evaluated against the task solution. Line comments starting with `//` are ignored by the parser and do not affect the evaluation. Connections between hierarchy levels (`customer -[customercity]- city`, also `=[text]=` and `-[text]->`) and fact-dimension connections (`Sales -[soldat]- Time`) can carry a description; the description is part of the model, so it must match the solution. Depending on the task configuration, the complete model is compared structurally or individual evaluation criteria are checked for partial credit. Criteria can optionally allow partial solutions or an incorrect fact class. Diagnostic feedback can include criterion-specific results and an SVG visualization of the submitted model.
+Students submit a DFM model in the supported textual notation. The model can contain facts with measures and descriptives, dimensions with hierarchies and levels, and fact-dimension connections. The submitted model is parsed and evaluated against the task solution. Line comments starting with `//` are ignored by the parser and do not affect the evaluation. Connections between hierarchy levels (`customer -[customercity]- city`, also `=[text]=` and `-[text]->`) and fact-dimension connections (`Sales -[soldat]- Time`) can carry a description; the description is part of the model, so it must match the solution. Depending on the task configuration, the complete model is compared structurally or individual evaluation criteria are checked for partial credit. Criteria can optionally allow partial solutions or an incorrect fact class. Diagnostic feedback can include criterion-specific results and a PNG visualization of the submitted model (embedded as a base64 `<img>` in the feedback).
 
 This project **can** be used as a template for new task apps. Replace the task type name with the name of your task type.
 
@@ -18,6 +18,8 @@ This can be done by setting the environment variable `SPRING_PROFILES_ACTIVE` to
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## Docker
+
+The image starts the JVM with `-Djava.awt.headless=true`, because the diagram in the feedback is rendered as PNG with Java2D. If diagrams show no text or fail to render in your base image, install a font package (e.g. `fontconfig` and `fonts-dejavu-core`).
 
 Start a new instance of the application using Docker:
 

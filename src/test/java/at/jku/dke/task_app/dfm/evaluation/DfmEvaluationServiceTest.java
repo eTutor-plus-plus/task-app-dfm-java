@@ -77,27 +77,33 @@ class DfmEvaluationServiceTest {
 
     @ParameterizedTest
     @EnumSource(value = SubmissionMode.class, names = {"RUN", "DIAGNOSE"})
-    void includesSvgVisualizationForRunAndDiagnose(SubmissionMode mode) {
+    void includesPngVisualizationForRunAndDiagnose(SubmissionMode mode) {
         var source = "fact Sales { profit; }; dimension Product { product - category; }; Sales - Product;";
 
         var result = service.evaluateDfm(source, source, BigDecimal.TEN, mode, 1, Locale.ENGLISH);
 
         var visualizations = result.criteria().stream()
-            .filter(criterion -> criterion.feedback().startsWith("<svg "))
+            .filter(criterion -> criterion.feedback().startsWith("<img src=\"data:image/png;base64,"))
             .toList();
         assertEquals(1, visualizations.size());
-        assertTrue(visualizations.get(0).feedback().contains("</svg>"));
+        var feedback = visualizations.get(0).feedback();
+        assertTrue(feedback.endsWith("\" alt=\"DFM-Diagramm\">"));
+        var base64 = feedback.substring("<img src=\"data:image/png;base64,".length(),
+            feedback.length() - "\" alt=\"DFM-Diagramm\">".length());
+        var png = java.util.Base64.getDecoder().decode(base64);
+        assertEquals((byte) 0x89, png[0]);
+        assertEquals("PNG", new String(png, 1, 3, StandardCharsets.US_ASCII));
         assertTrue(visualizations.get(0).passed());
     }
 
     @Test
-    void omitsSvgVisualizationWhenFeedbackIsDisabled() {
+    void omitsPngVisualizationWhenFeedbackIsDisabled() {
         var source = "fact Sales { profit; };";
 
         var result = service.evaluateDfm(source, source, BigDecimal.TEN,
             SubmissionMode.RUN, 0, Locale.ENGLISH);
 
-        assertTrue(result.criteria().stream().noneMatch(criterion -> criterion.feedback().startsWith("<svg ")));
+        assertTrue(result.criteria().stream().noneMatch(criterion -> criterion.feedback().contains("<img ")));
     }
 
     @Test

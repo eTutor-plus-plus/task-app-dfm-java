@@ -21,9 +21,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.HtmlUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 
@@ -113,7 +115,7 @@ public class EvaluationService {
         if (valid && feedbackLevel > 0) {
             criteria.add(new CriterionDto(
                 messageSource.getMessage("criterium.visualization", null, locale), null, true,
-                visualizationService.render(actual)));
+                generateImage(actual, locale)));
         }
         String feedback;
         switch (mode) {
@@ -140,6 +142,17 @@ public class EvaluationService {
             default -> throw new IllegalStateException("Unexpected value: " + mode);
         }
         return new GradingDto(maxPoints, points, feedback, criteria);
+    }
+
+    private String generateImage(List<AbstractElement> elements, Locale locale) {
+        try {
+            var png = visualizationService.renderPng(elements);
+            return "<img src=\"data:image/png;base64," + Base64.getEncoder().encodeToString(png)
+                + "\" alt=\"DFM-Diagramm\">";
+        } catch (RuntimeException | LinkageError ex) {
+            LOG.error("Could not generate DFM diagram", ex);
+            return "<p>" + HtmlUtils.htmlEscape(messageSource.getMessage("criterium.visualization.error", null, locale)) + "</p>";
+        }
     }
 
     private BigDecimal evaluateCriteria(List<DfmEvaluationCriterion> evaluationCriteria,
