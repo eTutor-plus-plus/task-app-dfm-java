@@ -6,8 +6,6 @@ import at.jku.dke.etutor.task_app.dto.TaskStatus;
 import at.jku.dke.task_app.dfm.ClientSetupExtension;
 import at.jku.dke.task_app.dfm.DatabaseSetupExtension;
 import at.jku.dke.task_app.dfm.data.entities.DfmTask;
-import at.jku.dke.task_app.dfm.data.entities.DfmTaskGroup;
-import at.jku.dke.task_app.dfm.data.repositories.DfmTaskGroupRepository;
 import at.jku.dke.task_app.dfm.data.repositories.DfmTaskRepository;
 import at.jku.dke.task_app.dfm.dto.ModifyDfmTaskDto;
 import io.restassured.http.ContentType;
@@ -35,19 +33,13 @@ class TaskControllerTest {
     @Autowired
     private DfmTaskRepository repository;
 
-    @Autowired
-    private DfmTaskGroupRepository groupRepository;
-
     private long taskId;
-    private long taskGroupId;
 
     @BeforeEach
     void initDb() {
         this.repository.deleteAll();
 
-        var group = this.groupRepository.save(new DfmTaskGroup(1L, TaskStatus.APPROVED, 1, 10));
-        this.taskGroupId = group.getId();
-        this.taskId = this.repository.save(new DfmTask(1L, BigDecimal.TWO, TaskStatus.APPROVED, group, "fact Sales { profit; };")).getId();
+        this.taskId = this.repository.save(new DfmTask(1L, BigDecimal.TWO, TaskStatus.APPROVED, "fact Sales { profit; };")).getId();
     }
 
     //#region --- GET ---
@@ -107,7 +99,7 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.CRUD_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+            .body(new ModifyTaskDto<>(null, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
                 new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
@@ -128,7 +120,7 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.CRUD_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "", TaskStatus.APPROVED,
+            .body(new ModifyTaskDto<>(null, BigDecimal.TEN, "", TaskStatus.APPROVED,
                 new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
@@ -160,7 +152,7 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.SUBMIT_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+            .body(new ModifyTaskDto<>(null, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
                 new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
@@ -179,7 +171,7 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.CRUD_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+            .body(new ModifyTaskDto<>(null, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
                 new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
@@ -199,7 +191,7 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.CRUD_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+            .body(new ModifyTaskDto<>(null, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
                 new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
@@ -216,7 +208,7 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.CRUD_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "sql", TaskStatus.APPROVED,
+            .body(new ModifyTaskDto<>(null, BigDecimal.TEN, "sql", TaskStatus.APPROVED,
                 new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()
@@ -248,7 +240,7 @@ class TaskControllerTest {
             .port(port)
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.SUBMIT_API_KEY)
             .contentType(ContentType.JSON)
-            .body(new ModifyTaskDto<>(this.taskGroupId, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
+            .body(new ModifyTaskDto<>(null, BigDecimal.TEN, "dfm", TaskStatus.APPROVED,
                 new ModifyDfmTaskDto("fact Sales { profit; };", List.of())))
             // WHEN
             .when()

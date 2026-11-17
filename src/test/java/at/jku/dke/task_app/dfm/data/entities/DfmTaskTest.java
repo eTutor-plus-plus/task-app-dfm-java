@@ -28,21 +28,17 @@ class DfmTaskTest {
         final String expected = "fact Sales { profit; };";
         final BigDecimal maxPoints = BigDecimal.TEN;
         final TaskStatus status = TaskStatus.APPROVED;
-        final DfmTaskGroup taskGroup = new DfmTaskGroup();
-        taskGroup.setId(55L);
 
         // Act
-        var task = new DfmTask(maxPoints, status, taskGroup, expected);
+        var task = new DfmTask(maxPoints, status, expected);
         String actualSolution = task.getSolution();
         BigDecimal actualMaxPoints = task.getMaxPoints();
         TaskStatus actualStatus = task.getStatus();
-        DfmTaskGroup actualTaskGroup = task.getTaskGroup();
 
         // Assert
         assertEquals(expected, actualSolution);
         assertEquals(maxPoints, actualMaxPoints);
         assertEquals(status, actualStatus);
-        assertEquals(taskGroup, actualTaskGroup);
     }
 
     @Test
@@ -51,24 +47,20 @@ class DfmTaskTest {
         final String expected = "fact Sales { profit; };";
         final BigDecimal maxPoints = BigDecimal.TEN;
         final TaskStatus status = TaskStatus.APPROVED;
-        final DfmTaskGroup taskGroup = new DfmTaskGroup();
-        taskGroup.setId(55L);
         final long id = 1L;
 
         // Act
-        var task = new DfmTask(id, maxPoints, status, taskGroup, expected);
+        var task = new DfmTask(id, maxPoints, status, expected);
         long actualId = task.getId();
         String actualSolution = task.getSolution();
         BigDecimal actualMaxPoints = task.getMaxPoints();
         TaskStatus actualStatus = task.getStatus();
-        DfmTaskGroup actualTaskGroup = task.getTaskGroup();
 
         // Assert
         assertEquals(id, actualId);
         assertEquals(expected, actualSolution);
         assertEquals(maxPoints, actualMaxPoints);
         assertEquals(status, actualStatus);
-        assertEquals(taskGroup, actualTaskGroup);
     }
 
     @Test

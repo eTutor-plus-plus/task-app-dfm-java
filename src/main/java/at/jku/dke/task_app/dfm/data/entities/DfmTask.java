@@ -1,12 +1,13 @@
 package at.jku.dke.task_app.dfm.data.entities;
 
-import at.jku.dke.etutor.task_app.data.entities.BaseTaskInGroup;
+import at.jku.dke.etutor.task_app.data.entities.BaseTask;
 import at.jku.dke.etutor.task_app.dto.TaskStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,12 +19,12 @@ import java.math.BigDecimal;
  */
 @Entity
 @Table(name = "task")
-public class DfmTask extends BaseTaskInGroup<DfmTaskGroup> {
+public class DfmTask extends BaseTask {
     @NotNull
     @Column(name = "solution", nullable = false, length = 5000)
     private String solution;
 
-    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private final List<DfmEvaluationCriterion> evaluationCriteria = new ArrayList<>();
 
     /**
@@ -46,11 +47,10 @@ public class DfmTask extends BaseTaskInGroup<DfmTaskGroup> {
      *
      * @param maxPoints The maximum points.
      * @param status    The status.
-     * @param taskGroup The task group.
      * @param solution  The solution.
      */
-    public DfmTask(BigDecimal maxPoints, TaskStatus status, DfmTaskGroup taskGroup, String solution) {
-        super(maxPoints, status, taskGroup);
+    public DfmTask(BigDecimal maxPoints, TaskStatus status, String solution) {
+        super(maxPoints, status);
         this.solution = solution;
     }
 
@@ -60,11 +60,10 @@ public class DfmTask extends BaseTaskInGroup<DfmTaskGroup> {
      * @param id        The identifier.
      * @param maxPoints The maximum points.
      * @param status    The status.
-     * @param taskGroup The task group.
      * @param solution  The solution.
      */
-    public DfmTask(Long id, BigDecimal maxPoints, TaskStatus status, DfmTaskGroup taskGroup, String solution) {
-        super(id, maxPoints, status, taskGroup);
+    public DfmTask(Long id, BigDecimal maxPoints, TaskStatus status, String solution) {
+        super(id, maxPoints, status);
         this.solution = solution;
     }
 

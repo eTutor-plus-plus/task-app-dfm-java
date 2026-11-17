@@ -2,11 +2,9 @@ package at.jku.dke.task_app.dfm.services;
 
 import at.jku.dke.etutor.task_app.dto.ModifyTaskDto;
 import at.jku.dke.etutor.task_app.dto.TaskModificationResponseDto;
-import at.jku.dke.etutor.task_app.services.BaseTaskInGroupService;
+import at.jku.dke.etutor.task_app.services.BaseTaskService;
 import at.jku.dke.task_app.dfm.data.entities.DfmTask;
-import at.jku.dke.task_app.dfm.data.entities.DfmTaskGroup;
 import at.jku.dke.task_app.dfm.data.entities.DfmEvaluationCriterion;
-import at.jku.dke.task_app.dfm.data.repositories.DfmTaskGroupRepository;
 import at.jku.dke.task_app.dfm.data.repositories.DfmTaskRepository;
 import at.jku.dke.task_app.dfm.dto.ModifyDfmTaskDto;
 import at.jku.dke.dfm.core.parser.DfmParser;
@@ -24,8 +22,7 @@ import java.util.stream.Collectors;
  * This class provides methods for managing {@link DfmTask}s.
  */
 @Service
-public class
-DfmTaskService extends BaseTaskInGroupService<DfmTask, DfmTaskGroup, ModifyDfmTaskDto> {
+public class DfmTaskService extends BaseTaskService<DfmTask, ModifyDfmTaskDto> {
 
     private final MessageSource messageSource;
     private final DfmParser parser = new DfmParser();
@@ -33,12 +30,11 @@ DfmTaskService extends BaseTaskInGroupService<DfmTask, DfmTaskGroup, ModifyDfmTa
     /**
      * Creates a new instance of class {@link DfmTaskService}.
      *
-     * @param repository          The task repository.
-     * @param taskGroupRepository The task group repository.
-     * @param messageSource       The message source.
+     * @param repository    The task repository.
+     * @param messageSource The message source.
      */
-    public DfmTaskService(DfmTaskRepository repository, DfmTaskGroupRepository taskGroupRepository, MessageSource messageSource) {
-        super(repository, taskGroupRepository);
+    public DfmTaskService(DfmTaskRepository repository, MessageSource messageSource) {
+        super(repository);
         this.messageSource = messageSource;
     }
 

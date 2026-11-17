@@ -9,9 +9,7 @@ import at.jku.dke.task_app.dfm.ClientSetupExtension;
 import at.jku.dke.task_app.dfm.DatabaseSetupExtension;
 import at.jku.dke.task_app.dfm.data.entities.DfmSubmission;
 import at.jku.dke.task_app.dfm.data.entities.DfmTask;
-import at.jku.dke.task_app.dfm.data.entities.DfmTaskGroup;
 import at.jku.dke.task_app.dfm.data.repositories.DfmSubmissionRepository;
-import at.jku.dke.task_app.dfm.data.repositories.DfmTaskGroupRepository;
 import at.jku.dke.task_app.dfm.data.repositories.DfmTaskRepository;
 import at.jku.dke.task_app.dfm.dto.DfmSubmissionDto;
 import io.restassured.http.ContentType;
@@ -44,9 +42,6 @@ class SubmissionControllerTest {
     private DfmTaskRepository repository;
 
     @Autowired
-    private DfmTaskGroupRepository groupRepository;
-
-    @Autowired
     private DfmSubmissionRepository submissionRepository;
 
     private long taskId;
@@ -57,8 +52,7 @@ class SubmissionControllerTest {
     void initDb() {
         this.repository.deleteAll();
 
-        var group = this.groupRepository.save(new DfmTaskGroup(1L, TaskStatus.APPROVED, 1, 10));
-        var task = this.repository.save(new DfmTask(1L, BigDecimal.TWO, TaskStatus.APPROVED, group, "fact Sales { profit; };"));
+        var task = this.repository.save(new DfmTask(1L, BigDecimal.TWO, TaskStatus.APPROVED, "fact Sales { profit; };"));
         this.taskId = task.getId();
 
         var submission = new DfmSubmission("test-user", "test-id", task, "de", 3, SubmissionMode.SUBMIT, "5");
@@ -98,7 +92,7 @@ class SubmissionControllerTest {
             .header(AuthConstants.AUTH_TOKEN_HEADER_NAME, ClientSetupExtension.SUBMIT_API_KEY)
             .queryParams("persist", false)
             .contentType(ContentType.JSON)
-            .body(new SubmitSubmissionDto<>("test-user", "test-id", this.taskId, "de", SubmissionMode.SUBMIT, 3, new DfmSubmissionDto("5")))
+            .body(new SubmitSubmissionDto<>("test-user", "test-id", this.taskId, "de", SubmissionMode.SUBMIT, 3, new DfmSubmissionDto("fact Sales { profit; };")))
             // WHEN
             .when()
             .post("/api/submission")
@@ -111,7 +105,7 @@ class SubmissionControllerTest {
             .body("grading.maxPoints", equalTo(2f))
             .body("grading.points", equalTo(2f))
             .body("grading.generalFeedback", any(String.class))
-            .body("grading.criteria", hasSize(1));
+            .body("grading.criteria", hasSize(2));
     }
 
     @Test
